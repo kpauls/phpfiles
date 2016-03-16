@@ -1,125 +1,78 @@
-<html>
-   
-   <head>
-      <style>
-         .error {color: #FF0000;}
-      </style>
-   </head>
-   
-   <body>
-      <?php
-      var_dump ($_POST );
-      echo '<pre>';
-      
-         // define variables and set to empty values
-         $usernameErr = $emailErr = $genderErr = $websiteErr = "";
-         $username = $email = $gender = $website = "";
-         
-         if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            if (empty($_POST["username"])) {
-               $usernameErr = "UserName is required";
-            }else {
-               $username = test_input($_POST["username"]);
-            }
-            
-            if (empty($_POST["password"])) {
-               $passwordErr = "Password is required";
-            }else {
-               $password = test_input($_POST["password"]);
-               
-             
-               if (!filter_var($password, FILTER_VALIDATE_EMAIL)) {
-                  $passwordErr = "Please enter a password less than 12 characters"; 
-               }
-            }
-            
-            if (empty($_POST["email"])) {
-              $emailErr = "Email is required";
-            }
-            else {
-               $email = test_input($_POST["email"]);
-            }
-            
-            if (empty($_POST["gender"])) {
-               $genderErr = "Gender is required";
-            }else {
-               $gender = test_input($_POST["gender"]);
-            }
-         }
-         
-         function test_input($data) {
-            $data = trim($data);
-            $data = stripslashes($data);
-            $data = htmlspecialchars($data);
-            return $data;
-         } 
-      ?>
-     
-      <h2>Form</h2>
-      
-      <form method = "POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]);?>">>
-         <table>
-            <tr>
-               <td>UserName:</td>
-               <td><input type = "text" name = "username">
-                  <span class = "error">* <?php echo $usernameErr;?></span>
-               </td>
-            </tr>
-           
-            <tr>
-               <td>E-mail: </td>
-               <td><input type = "text" name = "email">
-                  <span class = "error">* <?php echo $emailErr;?></span>
-               </td>
-            </tr>
-           
-            <tr>
-               <td>Time:</td>
-               <td> <input type = "text" name = "website">
-                  <span class = "error"><?php echo $websiteErr;?></span>
-               </td>
-            </tr>
-            
-            <tr>
-               <td>Gender:</td>
-               <td>
-                  <input type = "radio" name = "gender" value = "female">Female
-                  <input type = "radio" name = "gender" value = "male">Male
-                  <span class = "error">* <?php echo $genderErr;?></span>
-               </td>
-            </tr>
-            
-            <td>
-               <input type = "submit" name = "submit" value = "Submit"> 
-            </td>
-            
-         </table>
-         
-      </form>
-      
-      <?php
-         echo "<h2>Input</h2>";
-         echo $username;
-         echo "<br>";
-         
-         echo $email;
-         echo "<br>";
-         
-         echo $website;
-         echo "<br>";
-         
-         echo $gender;
-
-          if( !filled( $_POST) )
-{    echo "Thank you for submitting the form";
-    header("Location: http://localhost/phpwork/redirect.php");
+<?php
+ 
+//prevent access if they haven't submitted the form.
+if (!isset($_POST['submit'])) {
+    die(header("Location: form.php"));
 }
-      ?>
-   
-   </body>
-</html>
-
-
-
-
-
+ 
+session_start();
+ 
+$_SESSION['formAttempt'] = true;
+ 
+if (isset($_SESSION['error'])) {
+    unset($_SESSION['error']);
+}
+$_SESSION['error'] = array();
+ 
+$required = array("name","email","password1","password2");
+ 
+//Check required fields
+foreach ($required as $requiredField) {
+    if (!isset($_POST[$requiredField]) || $_POST[$requiredField] == "") {
+        $_SESSION['error'][] = $requiredField . " is required.";
+    }
+}
+ 
+if (!preg_match('/^[w .]+$/',$_POST['name'])) {
+    $_SESSION['error'][] = "Name must be letters and numbers only.";
+}
+ 
+ 
+$validStates = array("Alabama","California","Colorado","Florida","Illinois","New Jersey","New
+York","Wisconsin");
+if (isset($_POST['state']) && $_POST['state'] != "") {
+    if (!in_array($_POST['state'],$validStates)) {
+        $_SESSION['error'][] = "Please choose a valid state";
+    }
+}
+ 
+if (isset($_POST['zip']) && $_POST['zip'] != "") {
+    if (!preg_match('/^[d]+$/',$_POST['zip'])) {
+        $_SESSION['error'][] = "ZIP should be digits only.";
+    } else if (strlen($_POST['zip']) < 5 || strlen($_POST['zip']) > 9) {
+        $_SESSION['error'][] = "ZIP should be between 5 and 9 digits";
+    }
+}
+ 
+if (isset($_POST['phone']) && $_POST['phone'] != "") {
+    if (!preg_match('/^[d]+$/',$_POST['phone'])) {
+        $_SESSION['error'][] = "Phone number should be digits only";
+    } else if (strlen($_POST['phone']) < 10) {
+        $_SESSION['error'][] = "Phone number must be at least 10 digits";
+    }
+    if (!isset($_POST['phonetype']) || $_POST['phonetype'] == "") {
+        $_SESSION['error'][] = "Please choose a phone number type";
+    } else {
+        $validPhoneTypes = array("work","home");
+        if (!in_array($_POST['phonetype'],$validPhoneTypes)) {
+            $_SESSION['error'][] = "Please choose a valid phone number type.";
+        }
+    }
+}
+ 
+if (!filter_var($_POST['email'],FILTER_VALIDATE_EMAIL)) {
+    $_SESSION['error'][] = "Invalid e-mail address";
+}
+ 
+if ($_POST['password1'] != $_POST['password2']) {
+    $_SESSION['error'][] = "Passwords don't match";
+}
+ 
+//final disposition
+if (count($_SESSION['error']) > 0) {
+    die(header("Location: form.php"));
+} else {
+    unset($_SESSION['formAttempt']);
+    die(header("Location: success.php"));
+}
+?>
